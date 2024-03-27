@@ -129,7 +129,7 @@ contract NFinTech is IERC721 {
         safeTransferFrom(from, to, tokenId, "");
     }
 
-        function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory data)
+    function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory data)
         private returns (bool)
     {
         if (isContract(to)) { // Utility function to check if `to` is a contract
