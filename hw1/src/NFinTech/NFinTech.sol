@@ -76,6 +76,8 @@ contract NFinTech is IERC721 {
 
     function setApprovalForAll(address operator, bool approved) external {
         // TODO: please add your implementaiton here
+        require(operator != msg.sender);
+        require(operator != address(0));
         _operatorApproval[msg.sender][operator] = approved;
         emit ApprovalForAll(msg.sender, operator, approved);
     }
@@ -86,6 +88,7 @@ contract NFinTech is IERC721 {
         // Done!
     }
 
+    //interface?????????????????????????????????????????????//
     //why do we need owndrOf() and _owner[]?
 
     function approve(address to, uint256 tokenId) external {
@@ -101,21 +104,57 @@ contract NFinTech is IERC721 {
     }
 
     function transferFrom(address from, address to, uint256 tokenId) public {
-        // TODO: please add your implementaiton here
-        require(_owner[tokenId] == from);
-        require(_tokenApproval[tokenId] == to);
+        require(_owner[tokenId] == from, "NFinTech: transfer from incorrect owner");
+        require(to != address(0), "NFinTech: transfer to zero address");
+        require(
+            _tokenApproval[tokenId] == msg.sender || _owner[tokenId] == msg.sender || _operatorApproval[from][msg.sender],
+            "NFinTech: caller is not owner nor approved"
+        );
+
         _owner[tokenId] = to;
-        _balances[from] --;
-        _balances[to] ++;
+        _balances[from] -= 1;
+        _balances[to] += 1;
+        delete _tokenApproval[tokenId]; // Resetting approval on transfer
 
         emit Transfer(from, to, tokenId);
     }
 
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) public {
-        // TODO: please add your implementaiton here
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public {
+        transferFrom(from, to, tokenId);
+        require(_checkOnERC721Received(from, to, tokenId, data), "NFinTech: transfer to non ERC721Receiver implementer");
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId) public {
-        // TODO: please add your implementaiton here
+        // Call the other `safeTransferFrom` function with empty `data`
+        safeTransferFrom(from, to, tokenId, "");
+    }
+
+        function _checkOnERC721Received(address from, address to, uint256 tokenId, bytes memory data)
+        private returns (bool)
+    {
+        if (isContract(to)) { // Utility function to check if `to` is a contract
+            try IERC721TokenReceiver(to).onERC721Received(msg.sender, from, tokenId, data) returns (bytes4 retval) {
+                return retval == IERC721TokenReceiver.onERC721Received.selector;
+            } catch (bytes memory reason) {
+                if (reason.length == 0) {
+                    revert("NFinTech: transfer to non ERC721Receiver implementer");
+                } else {
+                    /// @solidity memory-safe-assembly
+                    assembly {
+                        revert(add(32, reason), mload(reason))
+                    }
+                }
+            }
+        }
+        return true; // If `to` is an EOA, then we assume the transfer is accepted.
+    }
+
+    function isContract(address account) internal view returns (bool) {
+        // This method relies on `extcodesize`, which returns 0 for contracts in construction and when called during the transaction they're created in.
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
     }
 }

